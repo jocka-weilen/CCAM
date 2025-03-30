@@ -50,6 +50,7 @@ def visualize_heatmap(experiments, images, attmaps, epoch, cnt, phase='train', s
                      normalize=True)
     _, c, h, w = images.shape
     fig, axes = plt.subplots(n, n, figsize=(21, 21))
+    axes = np.array(axes).reshape(n, n)
     for j in range(axes.shape[0]):
         for k in range(axes.shape[1]):
             temp = attmaps[j * n + k, 0, :, :]
@@ -62,6 +63,7 @@ def visualize_heatmap(experiments, images, attmaps, epoch, cnt, phase='train', s
     plt.close()
 
     fig, axes = plt.subplots(n, n, figsize=(21, 21))
+    axes = np.array(axes).reshape(n, n)
     for j in range(axes.shape[0]):
         for k in range(axes.shape[1]):
             temp = attmaps[j * n + k, 0, :, :]

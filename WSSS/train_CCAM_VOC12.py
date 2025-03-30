@@ -38,8 +38,8 @@ parser = argparse.ArgumentParser()
 # Dataset
 ###############################################################################
 parser.add_argument('--seed', default=0, type=int)
-parser.add_argument('--num_workers', default=8, type=int)
-parser.add_argument('--data_dir', default='/data1/xjheng/dataset/VOC2012/', type=str)
+parser.add_argument('--num_workers', default=0, type=int)
+parser.add_argument('--data_dir', default='../dataset/VOC2012/', type=str)
 
 ###############################################################################
 # Network
@@ -50,7 +50,7 @@ parser.add_argument('--mode', default='normal', type=str)  # fix
 ###############################################################################
 # Hyperparameter
 ###############################################################################
-parser.add_argument('--batch_size', default=32, type=int)
+parser.add_argument('--batch_size', default=2, type=int,help='default=32')
 parser.add_argument('--max_epoch', default=10, type=int)
 parser.add_argument('--depth', default=50, type=int)
 
@@ -64,16 +64,17 @@ parser.add_argument('--max_image_size', default=640, type=int)
 
 parser.add_argument('--print_ratio', default=0.2, type=float)
 
-parser.add_argument('--tag', default='', type=str)
+parser.add_argument('--tag', default='CCAM_VOC12_MOCO', type=str)
 parser.add_argument('--augment', default='', type=str)
 
 parser.add_argument('--alpha', type=float, default=0.25)
-parser.add_argument('--pretrained', type=str, required=True,
+parser.add_argument('--pretrained', default='mocov2', type=str,
                         help='adopt different pretrained parameters, [supervised, mocov2, detco]')
 
 flag = True
 
 if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # 自动检测设备
     # global flag
     ###################################################################################
     # Arguments
@@ -159,7 +160,7 @@ if __name__ == '__main__':
     model = get_model(pretrained=args.pretrained)
     param_groups = model.get_parameter_groups()
 
-    model = model.cuda()
+    model = model.to(device)
     model.train()
     # model_info(model)
 
@@ -183,8 +184,8 @@ if __name__ == '__main__':
     ###################################################################################
     # Loss, Optimizer
     ###################################################################################
-    criterion = [SimMaxLoss(metric='cos', alpha=args.alpha).cuda(), SimMinLoss(metric='cos').cuda(),
-                 SimMaxLoss(metric='cos', alpha=args.alpha).cuda()]
+    criterion = [SimMaxLoss(metric='cos', alpha=args.alpha).to(device), SimMinLoss(metric='cos').to(device),
+                 SimMaxLoss(metric='cos', alpha=args.alpha).to(device)]
 
     optimizer = PolyOptimizer([
         {'params': param_groups[0], 'lr': args.lr, 'weight_decay': args.wd},
@@ -211,7 +212,7 @@ if __name__ == '__main__':
     for epoch in range(args.max_epoch):
         for iteration, (images, labels) in enumerate(train_loader):
 
-            images, labels = images.cuda(), labels.cuda()
+            images, labels = images.to(device), labels.to(device)
 
             optimizer.zero_grad()
             fg_feats, bg_feats, ccam = model(images)
