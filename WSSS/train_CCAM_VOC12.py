@@ -50,7 +50,7 @@ parser.add_argument('--mode', default='normal', type=str)  # fix
 ###############################################################################
 # Hyperparameter
 ###############################################################################
-parser.add_argument('--batch_size', default=2, type=int,help='default=32')
+parser.add_argument('--batch_size', default=4, type=int,help='default=32')
 parser.add_argument('--max_epoch', default=10, type=int)
 parser.add_argument('--depth', default=50, type=int)
 
@@ -159,7 +159,18 @@ if __name__ == '__main__':
     ###################################################################################
     model = get_model(pretrained=args.pretrained)
     param_groups = model.get_parameter_groups()
-
+    # print("param_groups======")
+    # print(len(param_groups))
+    # print(len(param_groups[0]))
+    # print(len(param_groups[1]))
+    # print(len(param_groups[2]))
+    # print(len(param_groups[3]))
+    # 4
+    # 54
+    # 0
+    # 0
+    # 0
+    # quit()
     model = model.to(device)
     model.train()
     # model_info(model)
@@ -216,7 +227,9 @@ if __name__ == '__main__':
 
             optimizer.zero_grad()
             fg_feats, bg_feats, ccam = model(images)
-
+            # print(fg_feats.shape)
+            # print(bg_feats.shape)
+            # quit()
             loss1 = criterion[0](fg_feats)
             loss2 = criterion[1](bg_feats, fg_feats)
             loss3 = criterion[2](bg_feats)

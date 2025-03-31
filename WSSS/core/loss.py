@@ -7,7 +7,9 @@ def cos_simi(embedded_fg, embedded_bg):
     embedded_fg = F.normalize(embedded_fg, dim=1)
     embedded_bg = F.normalize(embedded_bg, dim=1)
     sim = torch.matmul(embedded_fg, embedded_bg.T)
-
+    # tensor([[1.0000, 0.7834],
+    #         [0.7834, 1.0000]], grad_fn=<MmBackward0>)
+    # torch.clamp 如果 x < min，则 x = min。 如果 x > max，则 x = max。 如果 min ≤ x ≤ max，则 x 保持不变。
     return torch.clamp(sim, min=0.0005, max=0.9995)
 
 
@@ -52,6 +54,12 @@ class SimMinLoss(nn.Module):
             raise NotImplementedError
 
         if self.reduction == 'mean':
+            # tensor([[4.3158, 1.2225, 1.5015, 1.2456],
+            #         [1.3501, 3.4790, 1.3829, 1.3588],
+            #         [1.5930, 1.3012, 3.4432, 1.4744],
+            #         [1.2589, 1.2417, 1.3422, 4.0942]], grad_fn=<NegBackward0>)
+            # tensor(1.9753, grad_fn= < MeanBackward0 >)
+            # _ = torch.mean(loss)
             return torch.mean(loss)
         elif self.reduction == 'sum':
             return torch.sum(loss)
@@ -73,13 +81,20 @@ class SimMaxLoss(nn.Module):
         """
         if self.metric == 'l2':
             raise NotImplementedError
-
+        # embedded_bg =torch.Size([2, 3072])
         elif self.metric == 'cos':
             sim = cos_simi(embedded_bg, embedded_bg)
             loss = -torch.log(sim)
             loss[loss < 0] = 0
+            # tensor([[0.9995, 0.7237, 0.8025, 0.7304],
+            #         [0.7237, 0.9995, 0.7338, 0.7192],
+            #         [0.8025, 0.7338, 0.9995, 0.7589],
+            #         [0.7304, 0.7192, 0.7589, 0.9995]], grad_fn=<ClampBackward1>)
+            # 进行降序排序
             _, indices = sim.sort(descending=True, dim=1)
+            # rank 表示相似度的排名
             _, rank = indices.sort(dim=1)
+            #     rank = rank - 1 调整后，高排名的样本权重更大，模型会更关注它们
             rank = rank - 1
             rank_weights = torch.exp(-rank.float() * self.alpha)
             loss = loss * rank_weights
