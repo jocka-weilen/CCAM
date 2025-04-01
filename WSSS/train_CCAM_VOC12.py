@@ -50,7 +50,7 @@ parser.add_argument('--mode', default='normal', type=str)  # fix
 ###############################################################################
 # Hyperparameter
 ###############################################################################
-parser.add_argument('--batch_size', default=4, type=int,help='default=32')
+parser.add_argument('--batch_size', default=32, type=int,help='default=32')
 parser.add_argument('--max_epoch', default=10, type=int)
 parser.add_argument('--depth', default=50, type=int)
 
@@ -74,7 +74,7 @@ parser.add_argument('--pretrained', default='mocov2', type=str,
 flag = True
 
 if __name__ == '__main__':
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # 自动检测设备
+    device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")  # 自动检测设备
     # global flag
     ###################################################################################
     # Arguments

@@ -68,7 +68,7 @@ parser = argparse.ArgumentParser()
 ###############################################################################
 parser.add_argument('--seed', default=0, type=int)
 parser.add_argument('--num_workers', default=8, type=int)
-parser.add_argument('--data_dir', default='/data1/xjheng/dataset/VOC2012/', type=str)
+parser.add_argument('--data_dir', default='../dataset/VOC2012/', type=str)
 
 ###############################################################################
 # Network
@@ -79,13 +79,15 @@ parser.add_argument('--mode', default='normal', type=str)
 ###############################################################################
 # Inference parameters
 ###############################################################################
-parser.add_argument('--tag', default='', type=str)
+parser.add_argument('--tag', default='CCAM_VOC12_MOCO', type=str)
 parser.add_argument('--domain', default='train', type=str)
 parser.add_argument('--vis_dir', default='vis_cam', type=str)
 
 parser.add_argument('--scales', default='0.5,1.0,1.5,2.0', type=str)
+parser.add_argument('--use-gpu', type=str, default='3', help="GPU IDs to use (e.g. '0', '0,1', or '-1' for CPU)")
 
 if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # 自动检测设备
     ###################################################################################
     # Arguments
     ###################################################################################
@@ -103,7 +105,7 @@ if __name__ == '__main__':
     pred_dir = create_directory(f'./experiments/predictions/{experiment_name}/')
 
     cam_path = create_directory(f'{args.vis_dir}/{experiment_name}')
-
+    # path='./experiments/models'
     model_path = './experiments/models/' + f'{args.tag}.pth'
     print(model_path)
 
@@ -127,7 +129,7 @@ if __name__ == '__main__':
     ###################################################################################
     model = get_model('mocov2')
 
-    model = model.cuda()
+    model = model.to(device)
     model.eval()
 
     log_func('[i] Architecture is {}'.format(args.architecture))
@@ -136,6 +138,7 @@ if __name__ == '__main__':
 
     try:
         use_gpu = os.environ['CUDA_VISIBLE_DEVICES']
+        # use_gpu = args.use_gpu
     except KeyError:
         use_gpu = '0'
 
@@ -145,7 +148,7 @@ if __name__ == '__main__':
         model = nn.DataParallel(model)
 
     # load_model(model, model_path, parallel=the_number_of_gpu > 1)
-    ckpt = torch.load(model_path)
+    ckpt = torch.load(model_path, map_location=torch.device(device))
     flag = ckpt['flag']
     if the_number_of_gpu > 1:
         model.module.load_state_dict(ckpt['state_dict'])
@@ -160,11 +163,11 @@ if __name__ == '__main__':
     
     model.eval()
     eval_timer.tik()
-
+    # scales = [0.5, 1.0, 1.5, 2.0]
     def get_cam(ori_image, scale):
         # preprocessing
         image = copy.deepcopy(ori_image)
-        image = image.resize((round(ori_w*scale), round(ori_h*scale)), resample=PIL.Image.CUBIC)
+        image = image.resize((round(ori_w*scale), round(ori_h*scale)), resample=PIL.Image.BICUBIC)
         
         image = normalize_fn(image)
         image = image.transpose((2, 0, 1))
@@ -173,7 +176,7 @@ if __name__ == '__main__':
         flipped_image = image.flip(-1)
         
         images = torch.stack([image, flipped_image])
-        images = images.cuda()
+        images = images.to(device)
         
         # inferenece
         _, _, cams = model(images, inference=True)
